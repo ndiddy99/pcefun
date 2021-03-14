@@ -1,0 +1,228 @@
+0001   0000             ;+==========================================================================-;
+0002   0000             ; main.asm: Entry point
+0003   0000             ;+==========================================================================-;
+0004   0000             	.include	"macro.inc"
+0001+  0000             #define LO_BYTE(value)	(value & $FF)
+0002+  0000             #define HI_BYTE(value)	(value >> 8)
+0005   0000             	.include	"system.inc"
+0001+  0000             .nolist
+0071+  0000             .list
+0006   0000             	.include	"variables.inc"
+0001+  0000             ;+==========================================================================-;
+0002+  0000             ; variables.inc: variables
+0003+  0000             ;+==========================================================================-;
+0004+  0000             ;	VRAM regions
+0005+  0000             SATB_VRAM	.equ	$7f00
+0006+  0000             
+0007+  0000             
+0008+  0000             ;	Zero page variables
+0009+  2000             		.org	$2000
+0010+  2000             	
+0011+  2000             ar_buf		.block	1	; buffer for vdc so interrupts don't mess us up
+0012+  2001             frame_count	.block	1	; incremented each vblank
+0013+  2002             _ax				; general purpose variables for parameters/scratchpad
+0014+  2002             _al		.block	1
+0015+  2003             _ah		.block	1
+0016+  2004             _bx
+0017+  2004             _bl		.block	1
+0018+  2005             _bh		.block	1
+0019+  2006             _cx
+0020+  2006             _cl		.block	1
+0021+  2007             _ch		.block	1
+0022+  2008             _dx
+0023+  2008             _dl		.block	1
+0024+  2009             _dh		.block	1
+0025+  200A             
+0026+  200A             ;	Macro that uses ar_buf to set vdc register number
+0027+  200A             #define	set_reg(reg_num)	lda	#reg_num
+0028+  200A             #defcont			\ sta	ar_buf
+0029+  200A             #defcont			\ st0	#reg_num
+0030+  200A             	
+0031+  200A             ;	Regular variables
+0032+  2200             		.org	$2200
+0033+  2200             		
+0034+  2200             satb_buf	.block	512	; SATB buffer
+0035+  2400             satb_buf_end
+0007   2400             
+0008   E000             	.org	$e000
+0009   E000             	.include	"graphics.asm"
+0001+  E000             bg_pal
+0002+  E000 00 00 FA 01 	.incbin	"bg.pal"
+0002+  E004 38 00 EF 00 
+0002+  E008 97 01 83 01 
+0002+  E00C 39 01 00 00 
+0002+  E010 00 00 00 00 
+0002+  E014 00 00 00 00 
+0002+  E018 00 00 00 00 
+0002+  E01C 00 00 00 00 
+0003+  E020             bg_pal_end
+0004+  E020             bg_tile
+0005+  E020 00 00 00 00 	.incbin	"bg.tle"
+0005+  E024 00 00 00 00 
+0005+  E028 00 00 00 00 
+0005+  E02C 00 00 00 00 
+0005+  E030 00 00 00 00 
+0005+  E034 00 00 00 00 
+0005+  E038 00 00 00 00 
+0005+  E03C 00 00 00 00 
+0005+  E040 00 00 44 00 
+0005+  E044 00 00 00 00 
+0005+  E048 18 00 00 00 
+0005+  E04C 7C 00 00 00 
+0005+  E050 00 00 00 00 
+0005+  E054 00 00 00 00 
+0005+  E058 18 00 00 00 
+0005+  E05C 00 00 00 00 
+0005+  E060 00 00 00 44 
+0005+  E064 00 00 00 00 
+0005+  E068 18 98 08 4A 
+0005+  E06C 00 7C 00 00 
+0005+  E070 00 00 00 00 
+0005+  E074 00 00 00 00 
+0005+  E078 80 00 42 00 
+0005+  E07C 7C 00 00 00 
+0005+  E080 3E 00 86 00 
+0005+  E084 F2 00 F8 00 
+0005+  E088 3E 00 9E 80 
+0005+  E08C F6 F0 FE FE 
+0005+  E090 FE 00 FE 00 
+0005+  E094 FE 00 FE 00 
+0005+  E098 FE 00 7E 00 
+0005+  E09C 0E 00 00 00 
+0006+  E0A0             bg_tile_end
+0010   E0A0             	
+0011   E0A0             init
+0012   E0A0 78          	sei	; disable all interrupts
+0013   E0A1 D4          	csh
+0014   E0A2 A9 FF       	lda	#$ff
+0015   E0A4 AA          	tax
+0016   E0A5 9A          	txs	; init stack pointer
+0017   E0A6 53 01       	tam0	; i/o in bank 0
+0018   E0A8 A9 F8       	lda	#$f8
+0019   E0AA 53 02       	tam1	; ram in bank 1
+0020   E0AC             
+0021   E0AC             ;	Video init
+0022   E0AC 20 E8 E0    	jsr	vdc_init
+0023   E0AF A9 04       	lda	#%00000100	; low-res, sharper video
+0024   E0B1 8D 00 04    	sta	vce_ctrl
+0025   E0B4             
+0026   E0B4             ;	Enable interrupts
+0027   E0B4 9C 03 14    	stz	irq_dis
+0028   E0B7 58          	cli
+0029   E0B8             
+0030   E0B8             ;	Clear SATB buffer
+0031   E0B8 9C 00 22    	stz	satb_buf
+0032   E0BB 73 00 22 01 	tii	satb_buf, satb_buf + 1, (satb_buf_end - satb_buf) - 1
+0032   E0BF 22 FF 01 
+0033   E0C2             
+0034   E0C2 9C 02 04    	stz	vce_adrl
+0035   E0C5 9C 03 04    	stz	vce_adrh
+0036   E0C8 E3 00 E0 04 	tia	bg_pal, vce_datl, (bg_pal_end - bg_pal)
+0036   E0CC 04 20 00 
+0037   E0CF             	
+0038   E0CF A9 00       	set_reg(mawr)
+0038   E0D1 85 00       
+0038   E0D3 03 00       
+0039   E0D5 13 00       	st1	#0
+0040   E0D7 23 00       	st2	#0
+0041   E0D9 A9 02       	set_reg(vwr)
+0041   E0DB 85 00       
+0041   E0DD 03 02       
+0042   E0DF E3 20 E0 02 	tia	bg_tile, vdc_lo, (bg_tile_end - bg_tile)
+0042   E0E3 00 80 00 
+0043   E0E6             	
+0044   E0E6             
+0045   E0E6             loop
+0046   E0E6 80 FE       	bra	loop
+0047   E0E8             
+0048   E0E8             
+0049   E0E8             ;	Init VDC from table
+0050   E0E8             vdc_init
+0051   E0E8 82          	clx
+0052   E0E9             _init_loop
+0053   E0E9 BD 03 E1    	lda	vdc_table, x
+0054   E0EC 30 14       	bmi	_done_init	; branch when we hit the $ff at end of table
+0055   E0EE 8D 00 00    	sta	$0		; register number
+0056   E0F1 E8          	inx
+0057   E0F2 BD 03 E1    	lda	vdc_table, x
+0058   E0F5 8D 02 00    	sta	$2		; low byte of register
+0059   E0F8 E8          	inx
+0060   E0F9 BD 03 E1    	lda	vdc_table, x
+0061   E0FC 8D 03 00    	sta	$3		; high byte of register
+0062   E0FF E8          	inx
+0063   E100 80 E7       	bra	_init_loop
+0064   E102             _done_init
+0065   E102 60          	rts
+0066   E103             
+0067   E103             
+0068   E103             ;	VDC initial register table
+0069   E103             vdc_table
+0070   E103 05          	.byte	cr	; Control register
+0071   E104             			; Enable BG, sprites, vblank interrupt
+0072   E104 C8 00       	.word	%0000000011001000
+0073   E106 06          	.byte	rcr	; Raster control register
+0074   E107 00 00       	.word	$0
+0075   E109 07          	.byte	bxr	; BG X scroll
+0076   E10A 00 00       	.word	$0
+0077   E10C 08          	.byte	byr	; BG Y scroll
+0078   E10D 00 00       	.word	$0
+0079   E10F 00          	.byte	mawr	; Memory access width register
+0080   E110 50 00       	.word	$50	; 64x64 tile BG
+0081   E112 0A          	.byte	hsr	; Horizontal sync register
+0082   E113 02 02       	.word	$202	; 256x240 display
+0083   E115 0B          	.byte	hdr	; Horizontal display register
+0084   E116 1F 03       	.word	$31f	; 256x240 display
+0085   E118 0C          	.byte	vpr	; Vertical sync register
+0086   E119 02 0F       	.word	$f02	; 256x240 display
+0087   E11B 0D          	.byte	vdr	; Vertical display register
+0088   E11C EF 00       	.word	$ef	; 256x240 display
+0089   E11E 0E          	.byte	vcr	; Vertical display end pos register
+0090   E11F 03 00       	.word	$3	; 256x240 display
+0091   E121 0F          	.byte	dcr	; DMA control register
+0092   E122 10 00       	.word	$10	; DMA VRAM to SATB each vblank
+0093   E124 13          	.byte	dvssr	; DMA VRAM - SATB source register
+0094   E125 00 7F       	.word	SATB_VRAM	; SATB at 7f00 in vram
+0095   E127 FF          	.byte	$ff	; End of table
+0096   E128             
+0097   E128             	
+0098   E128             no_int
+0099   E128 40          	rti
+0100   E129             
+0101   E129             	
+0102   E129             vdc_int
+0103   E129             ;	save state
+0104   E129 48          	pha
+0105   E12A DA          	phx
+0106   E12B 5A          	phy
+0107   E12C             ;
+0108   E12C AD 00 00    	lda	vdc_ar	; acknowledge interrupt
+0109   E12F E6 01       	inc	frame_count
+0110   E131             	
+0111   E131             ;	copy satb buffer to vram
+0112   E131 03 00       	st0	#mawr	; set up address to copy
+0113   E133 13 00       	st1	#LO_BYTE(SATB_VRAM)
+0114   E135 23 7F       	st2	#HI_BYTE(SATB_VRAM)
+0115   E137 03 02       	st0	#vwr	; write to vram
+0116   E139 E3 00 22 02 	tia	satb_buf, vdc_lo, (satb_buf_end - satb_buf)
+0116   E13D 00 00 02 
+0117   E140             
+0118   E140             ;	reset VDC address register
+0119   E140 A5 00       	lda	ar_buf
+0120   E142 8D 00 00    	sta	vdc_ar
+0121   E145             ;
+0122   E145             ;	restore state
+0123   E145 7A          	ply
+0124   E146 FA          	plx
+0125   E147 68          	pla
+0126   E148 40          	rti
+0127   E149             	
+0128   FFF6             	.org	$fff6
+0129   FFF6             vectors
+0130   FFF6 28 E1       	.word	no_int	; IRQ2 vector (BRK)
+0131   FFF8 29 E1       	.word	vdc_int	; IRQ1 vector (VDC)
+0132   FFFA 28 E1       	.word	no_int	; Timer vector
+0133   FFFC 28 E1       	.word	no_int	; NMI vector (unused)
+0134   FFFE A0 E0       	.word	init	; Reset vector
+0135   10000             	
+0136   10000             	.end
+tasm: Number of errors = 0
