@@ -2,7 +2,7 @@
 #include <string.h>
 
 #include "debug.h"
-// #include "sprite.h"
+#include "sprite.h"
 #include "tile.h"
 
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
@@ -29,17 +29,10 @@ int main(int argc, char **argv) {
 		char *infile;
 		switch(line[0]) {
 			// sprite directory
-			// case 's':
-				// infile = &line[2];
-				// if (snprintf(outfile, OUTFILE_LEN, "%s.spr", infile) > OUTFILE_LEN) {
-					// printf("Error: overran output file buffer, increase OUTFILE_LEN define in pceconv.c\n");
-					// fclose(asset_list);
-					// return -3;
-				// }
-				// else {
-					// sprite_process(infile, outfile);
-				// }
-				// break;
+			case 's':
+				infile = &line[2];
+				sprite_process(infile);
+				break;
 			
 			// tile graphics
 			case 't':

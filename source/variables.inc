@@ -2,6 +2,7 @@
 ; variables.inc: variables
 ;+==========================================================================-;
 ;	VRAM regions
+TILE_VRAM	.equ	$1000
 SATB_VRAM	.equ	$7f00
 
 

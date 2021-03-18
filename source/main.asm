@@ -10,7 +10,8 @@
 	
 init
 	sei	; disable all interrupts
-	csh
+	csh	; run at 7 mhz
+	cld	; disable bcd
 	lda	#$ff
 	tax
 	txs	; init stack pointer
@@ -35,11 +36,38 @@ init
 	stz	vce_adrh
 	tia	bg_pal, vce_datl, (bg_pal_end - bg_pal)
 	
+	stz	vce_adrl
+	lda	#$1
+	sta	vce_adrh
+	tia	bg_pal, vce_datl, (bg_pal_end - bg_pal)
+	
 	set_reg(mawr)
 	st1	#0
 	st2	#0
 	set_reg(vwr)
-	tia	bg_tile, vdc_lo, (bg_tile_end - bg_tile)
+	lda	#$00
+	sta	vdc_lo
+	lda	#$1
+	sta	vdc_hi
+	lda	#$01
+	sta	vdc_lo
+	lda	#$1
+	sta	vdc_hi
+	lda	#$02
+	sta	vdc_lo
+	lda	#$1
+	sta	vdc_hi
+	lda	#$03
+	sta	vdc_lo
+	lda	#$1
+	sta	vdc_hi
+	
+	set_reg(mawr)
+	st1	#LO_BYTE(TILE_VRAM)
+	st2	#HI_BYTE(TILE_VRAM)
+	set_reg(vwr)
+	; tia	bg_tile, vdc_lo, (bg_tile_end - bg_tile)
+	tia	catboy_tile, vdc_lo, (catboy_tile_end - catboy_tile)
 	
 
 loop
@@ -52,13 +80,13 @@ vdc_init
 _init_loop
 	lda	vdc_table, x
 	bmi	_done_init	; branch when we hit the $ff at end of table
-	sta	$0		; register number
+	sta	vdc_ar		; register number
 	inx
 	lda	vdc_table, x
-	sta	$2		; low byte of register
+	sta	vdc_lo		; low byte of register
 	inx
 	lda	vdc_table, x
-	sta	$3		; high byte of register
+	sta	vdc_hi		; high byte of register
 	inx
 	bra	_init_loop
 _done_init
@@ -76,18 +104,18 @@ vdc_table
 	.word	$0
 	.byte	byr	; BG Y scroll
 	.word	$0
-	.byte	mawr	; Memory access width register
+	.byte	mwr	; Memory access width register
 	.word	$50	; 64x64 tile BG
 	.byte	hsr	; Horizontal sync register
-	.word	$202	; 256x240 display
+	.word	$0202	; 256x224 display
 	.byte	hdr	; Horizontal display register
-	.word	$31f	; 256x240 display
+	.word	$031f	; 256x224 display
 	.byte	vpr	; Vertical sync register
-	.word	$f02	; 256x240 display
+	.word	$1302	; 256x224 display
 	.byte	vdr	; Vertical display register
-	.word	$ef	; 256x240 display
+	.word	$00df	; 256x224 display
 	.byte	vcr	; Vertical display end pos register
-	.word	$3	; 256x240 display
+	.word	$3	; 256x224 display
 	.byte	dcr	; DMA control register
 	.word	$10	; DMA VRAM to SATB each vblank
 	.byte	dvssr	; DMA VRAM - SATB source register

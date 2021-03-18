@@ -3,7 +3,7 @@ CC = gcc
 TARGET = pceconv.exe
 CFLAGS = -g -std=gnu99 -Wall
 
-OBJECTS = pceconv.o qdbmp.o tile.o
+OBJECTS = pceconv.o qdbmp.o tile.o sprite.o
 
 all: $(TARGET)
 
